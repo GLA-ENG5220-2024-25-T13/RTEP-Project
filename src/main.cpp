@@ -1,5 +1,6 @@
 #include "EventManager.hpp"
 #include "PseudoDigitalProximitySensor.hpp"
+#include "DigitalProximitySensor.hpp"
 #include "PseudoI2CProximitySensor.hpp"
 #include "AlarmHandler.hpp"
 #include <memory> // std::shared_ptr, std::make_shared
@@ -13,7 +14,8 @@ int main(int argc, char **argv)
     google::InitGoogleLogging(argv[0]);
 
     // Create sensor instances (assuming pin and I2C address)
-    auto digitalSensor1 = std::make_shared<PseudoDigitalProximitySensor>("PseudoDigitalSensor_1", 2);
+    // auto digitalSensor1 = std::make_shared<PseudoDigitalProximitySensor>("PseudoDigitalSensor_1", 2);
+    auto digitalSensor1 = std::make_shared<DigitalProximitySensor>("DigitalSensor_1", 17);
     auto i2cSensor1 = std::make_shared<PseudoI2CProximitySensor>("PseudoI2CSensor_1", 0x29);
 
     // Initialize sensors
