@@ -36,8 +36,8 @@ public:
         bool currentState = (1 == line.get_value());
         return currentState ? 1.0f : 0.0f; // Return 1.0 for detected, 0.0 for not detected
     }
-    // The implementation of the following 3 functions is the same as in PseudoDigitalProximitySensor.
-    // 下面3个函数的的实现和PseudoDigitalProximitySensor中的一样
+    // The implementation of the following 5 functions is the same as in PseudoDigitalProximitySensor.
+    // 下面5个函数的的实现和PseudoDigitalProximitySensor中的一样
     void registerCallback(SensorEventType eventType, SensorCallback callback) override
     {
         if (eventType == SensorEventType::PROXIMITY_DETECTED)
@@ -93,6 +93,12 @@ public:
                 lastState = currentState;
             }
         }
+    }
+    std::string getSensorId() const override {
+        return sensorId_;
+    }
+    std::string getSensorType() const override {
+        return "DigitalProximitySensor";
     }
     ~DigitalProximitySensor()
     {
