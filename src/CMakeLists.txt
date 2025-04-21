@@ -16,14 +16,14 @@ message(STATUS "  libgpiod libraries: ${GPIOD_LIBRARIES}")
 
 # --- Core Logic Source Files (Shared) ---
 set(CORE_SOURCES
-    AlarmController.cpp # Will be compiled differently based on macro!
-    GpioHandler.cpp
-    I2cHandler.cpp
+    src/AlarmController.cpp # Will be compiled differently based on macro!
+    src/GpioHandler.cpp
+    src/I2cHandler.cpp
 )
 set(CORE_HEADERS
-    AlarmController.h
-    GpioHandler.h
-    I2cHandler.h
+    src/AlarmController.h
+    src/GpioHandler.h
+    src/I2cHandler.h
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -36,12 +36,12 @@ FetchContent_MakeAvailable(json)
 message(STATUS "Found API dependencies: httplib (header), nlohmann::json (FetchContent)")
 
 set(RTEP_APP_SOURCES
-    main.cpp      # Original main entry point
-    ApiServer.cpp # API Server code
+    src/main.cpp      # Original main entry point
+    src/ApiServer.cpp # API Server code
     ${CORE_SOURCES} # Compile core sources directly for this target
 )
 set(RTEP_APP_HEADERS
-    ApiServer.h
+    src/ApiServer.h
     ${CORE_HEADERS} # Include core headers
 )
 
@@ -71,12 +71,12 @@ if(BUILD_GUI)
     set(CMAKE_INCLUDE_CURRENT_DIR ON) 
 
     set(GUI_SOURCES
-        gui/main_gui.cpp    # Path relative to this CMakeLists.txt
-        gui/alarmgui.cpp
+        src/gui/main_gui.cpp    # Path relative to this CMakeLists.txt
+        src/gui/alarmgui.cpp
         ${CORE_SOURCES}     # Compile core sources directly for this target too
     )
     set(GUI_HEADERS
-        gui/alarmgui.h
+        src/gui/alarmgui.h
         ${CORE_HEADERS}
     )
 

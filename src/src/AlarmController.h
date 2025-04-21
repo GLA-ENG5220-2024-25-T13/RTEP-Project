@@ -2,13 +2,13 @@
 #define ALARMCONTROLLER_H
 
 #ifdef RTEP_BUILD_WITH_GUI
-#include <QObject>                                // Include QObject only when building GUI
-#include <QString>                                // Include QString only when building GUI
-#define RTEP_ALARMCONTROLLER_PARENT_CLASS QObject // Define parent class
-#define RTEP_QOBJECT_MACRO Q_OBJECT               // Define Q_OBJECT macro
+#include <QObject>                                         // Include QObject only when building GUI
+#include <QString>                                         // Include QString only when building GUI
+#define RTEP_ALARMCONTROLLER_PARENT_CLASS : public QObject // Define parent class
+#define RTEP_QOBJECT_MACRO Q_OBJECT                        // Define Q_OBJECT macro
 #else
-#define RTEP_ALARMCONTROLLER_PARENT_CLASS public // Normal class without QObject
-#define RTEP_QOBJECT_MACRO                       // Empty macro when not GUI
+#define RTEP_ALARMCONTROLLER_PARENT_CLASS // Normal class without QObject
+#define RTEP_QOBJECT_MACRO                // Empty macro when not GUI
 #endif
 
 #include <atomic>
@@ -23,16 +23,17 @@ enum class AlarmState
     TRIGGERED
 };
 
-class AlarmController : RTEP_ALARMCONTROLLER_PARENT_CLASS
+class AlarmController RTEP_ALARMCONTROLLER_PARENT_CLASS
 {
-    RTEP_QOBJECT_MACRO // Use the conditional Q_OBJECT macro
-public:
-    AlarmController(std::string alertSoundPath = "",
-                    std::string playCmd = "",
-                    std::string stopCmd = ""
+RTEP_QOBJECT_MACRO // Use the conditional Q_OBJECT macro
+    public : AlarmController(std::string alertSoundPath = "",
+                             std::string playCmd = "",
+                             std::string stopCmd = ""
 #ifdef RTEP_BUILD_WITH_GUI
-                    , QObject *parent = nullptr // Add QObject parent only for GUI build
-#endif);
+                             ,
+                             QObject *parent = nullptr // Add QObject parent only for GUI build
+#endif
+             );
 
 #ifdef RTEP_BUILD_WITH_GUI
     Q_INVOKABLE void arm();
@@ -41,9 +42,9 @@ public:
 #else
     void arm();
     void disarm();
-    void resetTrigger();// Manually reset from TRIGGERED to ARMED
+    void resetTrigger(); // Manually reset from TRIGGERED to ARMED
 #endif
-    void trigger(const std::string &source); // source: "PIR", "PROXIMITY"                  
+    void trigger(const std::string &source); // source: "PIR", "PROXIMITY"
 
     AlarmState getState() const;
 #ifdef RTEP_BUILD_WITH_GUI
@@ -64,11 +65,11 @@ public:
     std::condition_variable &getConditionVariable();
     bool isArmed() const;
 #ifdef RTEP_BUILD_WITH_GUI
-    signals:
-        void stateChanged(AlarmState newState, const QString& stateString);
-        void triggerSourceChanged(const QString& source);
-        void sensorsUpdated(bool pirActive, bool proximityActive);
-        void playAlarmSoundRequest(bool play);
+signals:
+    void stateChanged(AlarmState newState, const QString &stateString);
+    void triggerSourceChanged(const QString &source);
+    void sensorsUpdated(bool pirActive, bool proximityActive);
+    void playAlarmSoundRequest(bool play);
 #endif
 private:
     void playAlertSound();
