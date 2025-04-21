@@ -6,22 +6,24 @@
 #include <condition_variable>
 #include <string>
 
-enum class AlarmState {
+enum class AlarmState
+{
     DISARMED,
     ARMED,
     TRIGGERED
 };
 
-class AlarmController {
+class AlarmController
+{
 public:
-    AlarmController(std::string alertSoundPath = "/home/pi/alarm.wav",
-                    std::string playCmd = "aplay",
-                    std::string stopCmd = "pkill aplay");
+    AlarmController(std::string alertSoundPath = "",
+                    std::string playCmd = "",
+                    std::string stopCmd = "");
 
     void arm();
     void disarm();
-    void trigger(const std::string& source); // source: "PIR", "PROXIMITY"
-    void resetTrigger(); // Manually reset from TRIGGERED to ARMED
+    void trigger(const std::string &source); // source: "PIR", "PROXIMITY"
+    void resetTrigger();                     // Manually reset from TRIGGERED to ARMED
 
     AlarmState getState() const;
     std::string getStateString() const;
@@ -33,8 +35,8 @@ public:
     // ------
 
     // For thread synchronization
-    std::mutex& getMutex();
-    std::condition_variable& getConditionVariable();
+    std::mutex &getMutex();
+    std::condition_variable &getConditionVariable();
     bool isArmed() const;
 
 private:
@@ -50,7 +52,7 @@ private:
     std::atomic<bool> pirTriggerActive;
     std::atomic<bool> proximityTriggerActive;
     // --- End New ---
-    
+
     // --- Sound configuration ---
     std::string soundFilePath;
     std::string soundPlayCommand; // e.g., "aplay" or "mpg123"

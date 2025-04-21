@@ -13,7 +13,8 @@
 // but it's safer to just set a flag for the main loop.
 std::atomic<bool> keepRunning(true);
 
-void signalHandler(int signum) {
+void signalHandler(int signum)
+{
     std::cout << "\nInterrupt signal (" << signum << ") received." << std::endl;
     keepRunning.store(false);
     // Potentially notify condition variables if threads are waiting indefinitely
@@ -21,23 +22,24 @@ void signalHandler(int signum) {
     // Be cautious with complex operations in signal handlers.
 }
 
-int main() {
+int main()
+{
     std::cout << "Starting Alarm System..." << std::endl;
 
     // --- Configuration ---
-    const std::string GPIO_CHIP = "gpiochip0"; // RPi 5 uses gpiochip0 for header pins
-    const unsigned int PIR_GPIO_LINE = 17;    // GPIO 17 for PIR output
-    const std::string I2C_DEVICE = "/dev/i2c-1"; // I2C bus 1 on RPi header
+    const std::string GPIO_CHIP = "gpiochip0";       // RPi 5 uses gpiochip0 for header pins
+    const unsigned int PIR_GPIO_LINE = 17;           // GPIO 17 for PIR output
+    const std::string I2C_DEVICE = "/dev/i2c-1";     // I2C bus 1 on RPi header
     const uint8_t VCNL4010_ADDR = VCNL4010_I2C_ADDR; // 0x13
-    const int I2C_POLL_INTERVAL_MS = 150;        // How often to check proximity sensor
-    const uint16_t PROXIMITY_THRESHOLD = 4000;  // Adjust based on testing
-    const std::string API_HOST = "0.0.0.0";      // Listen on all interfaces
-    const int API_PORT = 8080;                   // API server port
+    const int I2C_POLL_INTERVAL_MS = 150;            // How often to check proximity sensor
+    const uint16_t PROXIMITY_THRESHOLD = 4000;       // Adjust based on testing
+    const std::string API_HOST = "0.0.0.0";          // Listen on all interfaces
+    const int API_PORT = 8080;                       // API server port
 
     // --- Sound Configuration ---
     const std::string ALARM_SOUND_FILE = "./alarm.wav";
-    const std::string SOUND_PLAYER_CMD = "aplay -d";             // Use "aplay" for WAV
-    const std::string SOUND_STOP_CMD   = "pkill aplay";       // Command to stop the player
+    const std::string SOUND_PLAYER_CMD = "mpv --loop=inf"; // Use mpv for play audio
+    const std::string SOUND_STOP_CMD = "pkill mpv";        // Command to stop the player
 
     // --- Setup Signal Handling ---
     signal(SIGINT, signalHandler);  // Handle Ctrl+C
@@ -47,13 +49,15 @@ int main() {
     AlarmController alarmController(ALARM_SOUND_FILE, SOUND_PLAYER_CMD, SOUND_STOP_CMD);
 
     GpioHandler gpioHandler(alarmController, GPIO_CHIP, PIR_GPIO_LINE);
-    if (!gpioHandler.initialize()) {
+    if (!gpioHandler.initialize())
+    {
         std::cerr << "FATAL: Failed to initialize GPIO Handler." << std::endl;
         return 1;
     }
 
     I2cHandler i2cHandler(alarmController, I2C_DEVICE, VCNL4010_ADDR);
-    if (!i2cHandler.initialize()) {
+    if (!i2cHandler.initialize())
+    {
         std::cerr << "FATAL: Failed to initialize I2C Handler." << std::endl;
         return 1;
     }
@@ -63,18 +67,19 @@ int main() {
     // --- Start Services ---
     gpioHandler.startMonitoring();
     i2cHandler.startMonitoring(I2C_POLL_INTERVAL_MS, PROXIMITY_THRESHOLD);
-    if (!apiServer.start()) {
-         std::cerr << "FATAL: Failed to start API Server." << std::endl;
-         // Stop already started threads before exiting
-         gpioHandler.stopMonitoring();
-         i2cHandler.stopMonitoring();
-         return 1;
+    if (!apiServer.start())
+    {
+        std::cerr << "FATAL: Failed to start API Server." << std::endl;
+        // Stop already started threads before exiting
+        gpioHandler.stopMonitoring();
+        i2cHandler.stopMonitoring();
+        return 1;
     }
-
 
     // --- Main Loop (Keep application alive) ---
     std::cout << "Alarm system running. Press Ctrl+C to exit." << std::endl;
-    while (keepRunning.load()) {
+    while (keepRunning.load())
+    {
         // Main thread can sleep or perform other low-priority tasks
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -87,7 +92,7 @@ int main() {
     apiServer.stop();
     i2cHandler.stopMonitoring();
     gpioHandler.stopMonitoring(); // Important: Stop GPIO last if clean shutdown relies on it
-    alarmController.disarm(); // Disarming ensures sound stop logic runs
+    alarmController.disarm();     // Disarming ensures sound stop logic runs
 
     std::cout << "Alarm System stopped." << std::endl;
     return 0;

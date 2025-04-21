@@ -7,9 +7,10 @@
 #include <atomic>
 #include <string>
 
-class ApiServer {
+class ApiServer
+{
 public:
-    ApiServer(AlarmController& controller, const std::string& host = "0.0.0.0", int port = 8080);
+    ApiServer(AlarmController &controller, const std::string &host = "0.0.0.0", int port = 8080);
     ~ApiServer();
 
     bool start();
@@ -18,7 +19,7 @@ public:
 private:
     void run(); // Server loop runs in a separate thread
 
-    AlarmController& alarmController;
+    AlarmController &alarmController;
     httplib::Server svr;
     std::thread serverThread;
     std::string listenHost;
