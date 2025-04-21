@@ -228,7 +228,7 @@ void I2cHandler::monitorLoop()
     {
         if (readProximity(proxValue))
         {
-            std::cout << "Proximity: " << proxValue << std::endl; // Debugging output
+            // std::cout << "Proximity: " << proxValue << std::endl; // Debugging output
 
             // Check threshold only if armed
             if (alarmController.isArmed() && proxValue > proximityThreshold)
