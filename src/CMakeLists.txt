@@ -55,7 +55,7 @@ target_include_directories(RTEP PUBLIC
 
 target_link_libraries(RTEP PRIVATE
     # glog::glog
-    ${GPIOD_LIBRARIES}      # From pkg-config (-lgpiod)
+    ${GPIOD_LINK_LIBRARIES}      # From pkg-config (-lgpiod)
     Threads::Threads        # C++11 threads require linking pthread
     nlohmann_json::nlohmann_json
 )
