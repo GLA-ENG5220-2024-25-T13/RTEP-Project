@@ -25,8 +25,14 @@ bool ApiServer::start() {
     svr.Get("/status", [&](const httplib::Request& req, httplib::Response& res) {
         json response;
         response["state"] = alarmController.getStateString();
-        response["last_trigger"] = alarmController.getLastTriggerSource();
-        // TODO: Add more status info (sensor readings, uptime, etc.)
+        response["last_trigger"] = alarmController.getLastTriggerSource(); // First trigger source
+
+        // --- sensor states ---
+        json sensor_states;
+        sensor_states["pir_active"] = alarmController.isPirActive();
+        sensor_states["proximity_active"] = alarmController.isProximityActive();
+        response["sensors"] = sensor_states;
+        // --- End sensor states ---
 
         res.set_content(response.dump(), "application/json");
     });
@@ -76,8 +82,8 @@ bool ApiServer::start() {
 
 void ApiServer::stop() {
     if (isRunning.load()) {
-         std::cout << "Stopping API server..." << std::endl;
-         svr.stop(); // Tell httplib to stop listening
+        std::cout << "Stopping API server..." << std::endl;
+        svr.stop(); // Tell httplib to stop listening
         if (serverThread.joinable()) {
             serverThread.join(); // Wait for the server thread to finish
         }

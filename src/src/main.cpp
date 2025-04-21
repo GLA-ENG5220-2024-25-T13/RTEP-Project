@@ -34,12 +34,17 @@ int main() {
     const std::string API_HOST = "0.0.0.0";      // Listen on all interfaces
     const int API_PORT = 8080;                   // API server port
 
+    // --- Sound Configuration ---
+    const std::string ALARM_SOUND_FILE = "./alarm.wav";
+    const std::string SOUND_PLAYER_CMD = "aplay -d";             // Use "aplay" for WAV
+    const std::string SOUND_STOP_CMD   = "pkill aplay";       // Command to stop the player
+
     // --- Setup Signal Handling ---
     signal(SIGINT, signalHandler);  // Handle Ctrl+C
     signal(SIGTERM, signalHandler); // Handle kill command
 
     // --- Initialize Components ---
-    AlarmController alarmController;
+    AlarmController alarmController(ALARM_SOUND_FILE, SOUND_PLAYER_CMD, SOUND_STOP_CMD);
 
     GpioHandler gpioHandler(alarmController, GPIO_CHIP, PIR_GPIO_LINE);
     if (!gpioHandler.initialize()) {
@@ -82,6 +87,7 @@ int main() {
     apiServer.stop();
     i2cHandler.stopMonitoring();
     gpioHandler.stopMonitoring(); // Important: Stop GPIO last if clean shutdown relies on it
+    alarmController.disarm(); // Disarming ensures sound stop logic runs
 
     std::cout << "Alarm System stopped." << std::endl;
     return 0;

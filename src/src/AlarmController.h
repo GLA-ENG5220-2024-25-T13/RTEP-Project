@@ -14,16 +14,23 @@ enum class AlarmState {
 
 class AlarmController {
 public:
-    AlarmController();
+    AlarmController(std::string alertSoundPath = "/home/pi/alarm.wav",
+                    std::string playCmd = "aplay",
+                    std::string stopCmd = "pkill aplay");
 
     void arm();
     void disarm();
     void trigger(const std::string& source); // source: "PIR", "PROXIMITY"
-    void resetTrigger(); // Optional: Manually reset from TRIGGERED to ARMED/DISARMED
+    void resetTrigger(); // Manually reset from TRIGGERED to ARMED
 
     AlarmState getState() const;
     std::string getStateString() const;
     std::string getLastTriggerSource() const;
+
+    // methods/members for sensor status
+    bool isPirActive() const;
+    bool isProximityActive() const;
+    // ------
 
     // For thread synchronization
     std::mutex& getMutex();
@@ -31,10 +38,24 @@ public:
     bool isArmed() const;
 
 private:
+    void playAlertSound();
+    void stopAlertSound();
+
     std::atomic<AlarmState> currentState;
     mutable std::mutex stateMutex; // Mutable to allow locking in const methods like getState
     std::condition_variable stateCv;
     std::string lastTriggerSource;
+
+    // --- New members for active sensor tracking ---
+    std::atomic<bool> pirTriggerActive;
+    std::atomic<bool> proximityTriggerActive;
+    // --- End New ---
+    
+    // --- Sound configuration ---
+    std::string soundFilePath;
+    std::string soundPlayCommand; // e.g., "aplay" or "mpg123"
+    std::string soundStopCommand; // e.g., "pkill aplay" or "pkill mpg123"
+    // --- End Sound config ---
 };
 
 #endif
