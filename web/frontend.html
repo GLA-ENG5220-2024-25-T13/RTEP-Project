@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate-key="pageTitle">报警系统管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Base style for status light */
+        .status-light {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        /* Loading animation */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Language switcher button style */
+        .lang-button {
+            padding: 0.25rem 0.5rem;
+            margin-left: 0.5rem;
+            border-radius: 0.375rem; /* rounded-md */
+            font-size: 0.875rem; /* text-sm */
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .lang-button.active {
+            background-color: #3b82f6; /* bg-blue-600 */
+            color: white;
+            font-weight: 600; /* font-semibold */
+        }
+        .lang-button:not(.active) {
+            background-color: #e5e7eb; /* bg-gray-200 */
+            color: #374151; /* text-gray-700 */
+        }
+        .lang-button:not(.active):hover {
+             background-color: #d1d5db; /* hover:bg-gray-300 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
+        <div class="absolute top-4 right-4 flex items-center">
+            <span class="text-sm text-gray-600 mr-2" data-translate-key="langSwitchLabel">语言:</span>
+            <button id="lang-zh" class="lang-button" onclick="setLanguage('zh-CN')">中</button>
+            <button id="lang-en" class="lang-button" onclick="setLanguage('en-US')">EN</button>
+        </div>
+
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800" data-translate-key="mainTitle">报警系统状态</h1>
+
+        <div class="mb-6 space-y-4">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-md shadow-sm">
+                <span class="font-semibold text-gray-700" data-translate-key="currentStatusLabel">当前状态:</span>
+                <div class="flex items-center">
+                     <span id="status-light" class="status-light bg-gray-400"></span>
+                     <span id="status-text" class="font-bold text-gray-900" data-translate-key="loading">加载中...</span>
+                     <div id="loading-indicator" class="loader hidden"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-md shadow-sm">
+                <span class="font-semibold text-gray-700" data-translate-key="lastTriggerLabel">最后触发源:</span>
+                <span id="last-trigger" class="text-gray-900" data-translate-key="notAvailable">N/A</span>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-md shadow-sm">
+                 <h3 class="font-semibold text-gray-700 mb-2" data-translate-key="sensorStatusLabel">传感器状态:</h3>
+                <div class="flex items-center justify-between mb-1">
+                     <span data-translate-key="pirSensorLabel">PIR 传感器:</span>
+                    <span id="pir-status" class="text-gray-900" data-translate-key="statusUnknown">未知</span>
+                </div>
+                <div class="flex items-center justify-between">
+                     <span data-translate-key="proximitySensorLabel">接近传感器:</span>
+                     <span id="proximity-status" class="text-gray-900" data-translate-key="statusUnknown">未知</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+             <button id="arm-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" data-translate-key="armButton">
+                布防 (Arm)
+            </button>
+             <button id="disarm-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" data-translate-key="disarmButton">
+                撤防 (Disarm)
+            </button>
+             <button id="reset-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" data-translate-key="resetButton">
+                重置 (Reset)
+            </button>
+        </div>
+
+        <div id="message-area" class="mt-4 text-center text-sm text-red-600 h-5"></div>
+    </div>
+
+    <script>
+        // --- 配置 / Configuration ---
+        const STATUS_POLL_INTERVAL = 300; // 状态轮询间隔（毫秒） / Status polling interval (milliseconds)
+
+        // --- Translations ---
+        const translations = {
+             'zh-CN': {
+                'pageTitle': '报警系统管理',
+                'mainTitle': '报警系统状态',
+                'currentStatusLabel': '当前状态:',
+                'loading': '加载中...',
+                'lastTriggerLabel': '最后触发源:',
+                'notAvailable': 'N/A',
+                'sensorStatusLabel': '传感器状态:',
+                'pirSensorLabel': 'PIR 传感器:',
+                'proximitySensorLabel': '接近传感器:',
+                'statusUnknown': '未知',
+                'statusActive': '活动',
+                'statusInactive': '非活动',
+                'statusDisarmed': 'DISARMED',
+                'statusArmed': 'ARMED',
+                'statusTriggered': 'TRIGGERED',
+                'statusError': '错误/未知',
+                'armButton': '布防 (Arm)',
+                'disarmButton': '撤防 (Disarm)',
+                'resetButton': '重置 (Reset)',
+                'langSwitchLabel': '语言:',
+                'fetchStatusError': '获取状态失败: ',
+                'sendCommandError': '执行 {command} 命令失败: ',
+                'commandSuccess': '{command} 命令成功',
+                'armedMessage': '系统已布防。',
+                'disarmedMessage': '系统已撤防。',
+                'resetMessage': '报警触发已重置。'
+            },
+            'en-US': {
+                'pageTitle': 'Alarm System Management',
+                'mainTitle': 'Alarm System Status',
+                'currentStatusLabel': 'Current Status:',
+                'loading': 'Loading...',
+                'lastTriggerLabel': 'Last Trigger:',
+                'notAvailable': 'N/A',
+                'sensorStatusLabel': 'Sensor Status:',
+                'pirSensorLabel': 'PIR Sensor:',
+                'proximitySensorLabel': 'Proximity Sensor:',
+                'statusUnknown': 'Unknown',
+                'statusActive': 'Active',
+                'statusInactive': 'Inactive',
+                'statusDisarmed': 'DISARMED',
+                'statusArmed': 'ARMED',
+                'statusTriggered': 'TRIGGERED',
+                'statusError': 'Error/Unknown',
+                'armButton': 'Arm',
+                'disarmButton': 'Disarm',
+                'resetButton': 'Reset',
+                'langSwitchLabel': 'Language:',
+                'fetchStatusError': 'Failed to fetch status: ',
+                'sendCommandError': 'Failed to execute {command} command: ',
+                'commandSuccess': '{command} command successful',
+                'armedMessage': 'System armed.',
+                'disarmedMessage': 'System disarmed.',
+                'resetMessage': 'Alarm trigger reset.'
+            }
+        };
+
+        // --- DOM 元素引用 / DOM Element References ---
+        const statusText = document.getElementById('status-text');
+        const statusLight = document.getElementById('status-light');
+        const lastTrigger = document.getElementById('last-trigger');
+        const pirStatus = document.getElementById('pir-status');
+        const proximityStatus = document.getElementById('proximity-status');
+        const armButton = document.getElementById('arm-button');
+        const disarmButton = document.getElementById('disarm-button');
+        const resetButton = document.getElementById('reset-button');
+        const messageArea = document.getElementById('message-area');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const langButtonZh = document.getElementById('lang-zh');
+        const langButtonEn = document.getElementById('lang-en');
+
+        let currentAlarmState = 'UNKNOWN'; // 用于跟踪当前状态以控制按钮 / Track current state to control buttons
+        let currentLang = localStorage.getItem('alarmLang') || 'zh-CN'; // Current language
+
+        // --- API 请求函数 / API Request Functions ---
+        async function fetchStatus() {
+            loadingIndicator.classList.remove('hidden');
+            try {
+                // Use relative path!!!
+                const response = await fetch('/status');
+                if (!response.ok) {
+                    // Try reading error response body
+                    let errorText = response.statusText;
+                    try {
+                         errorText = await response.text();
+                    } catch(e) { /* Ignore if cannot read body */ }
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+                }
+                const data = await response.json();
+                updateStatusUI(data); // Update UI
+                clearMessage();
+            } catch (error) {
+                console.error('获取状态失败 (Failed to fetch status):', error);
+                // Use translated error message
+                const errorPrefix = translations[currentLang]['fetchStatusError'] || 'Failed to fetch status: ';
+                displayMessage(`${errorPrefix}${error.message}`);
+                // Reset UI to a default error state
+                updateStatusUI({ state: 'ERROR', last_trigger: 'N/A', sensors: { pir_active: false, proximity_active: false } });
+            } finally {
+                 loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function sendCommand(command) {
+            loadingIndicator.classList.remove('hidden');
+            displayMessage(''); // 清除旧消息 / Clear old messages
+            try {
+                const response = await fetch(`/${command}`, {
+                    method: 'POST',
+                });
+                 if (!response.ok) {
+                    let errorText = response.statusText;
+                    try {
+                         errorText = await response.text();
+                    } catch(e) { /* Ignore if cannot read body */ }
+                     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                const data = await response.json();
+                console.log(`${command} 命令响应 (Command response):`, data);
+                // 立即更新状态，而不是等待下一次轮询 / Update status immediately, don't wait for next poll
+                await fetchStatus(); // 等待状态更新完成 / Wait for status update to complete
+
+                // 显示来自 API 的消息或通用成功消息 / Show message from API or generic success message
+                let successMsgKey = '';
+                if (data.message) {
+                    // Try matching API message to translation key
+                    if (data.message.includes('armed')) successMsgKey = 'armedMessage';
+                    else if (data.message.includes('disarmed')) successMsgKey = 'disarmedMessage';
+                    else if (data.message.includes('reset')) successMsgKey = 'resetMessage';
+                }
+
+                let displayMsg = '';
+                if (successMsgKey && translations[currentLang][successMsgKey]) {
+                    displayMsg = translations[currentLang][successMsgKey];
+                } else {
+                    // Use generic success message template
+                    const successTemplate = translations[currentLang]['commandSuccess'] || '{command} command successful';
+                    displayMsg = successTemplate.replace('{command}', command);
+                }
+                displayMessage(displayMsg);
+
+                setTimeout(clearMessage, 3000); // Clear message after 3 seconds
+            } catch (error) {
+                console.error(`执行 ${command} 命令失败 (Failed to execute ${command} command):`, error);
+                const errorTemplate = translations[currentLang]['sendCommandError'] || 'Failed to execute {command} command: ';
+                displayMessage(errorTemplate.replace('{command}', command) + error.message);
+            } finally {
+                 loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- UI 更新函数 / UI Update Functions ---
+        function updateStatusUI(data) {
+            currentAlarmState = data.state || 'UNKNOWN'; // Get current state
+
+            lastTrigger.textContent = data.last_trigger || translations[currentLang]['notAvailable'];
+            pirStatus.textContent = data.sensors?.pir_active ? translations[currentLang]['statusActive'] : translations[currentLang]['statusInactive'];
+            proximityStatus.textContent = data.sensors?.proximity_active ? translations[currentLang]['statusActive'] : translations[currentLang]['statusInactive'];
+
+            // Update status light color and button states
+            statusLight.classList.remove('bg-gray-400', 'bg-green-500', 'bg-yellow-500', 'bg-red-500');
+            let statusKey = 'statusUnknown'; // 默认状态键 / Default status key
+            switch (currentAlarmState) {
+                case 'DISARMED':
+                    statusLight.classList.add('bg-gray-400');
+                    armButton.disabled = false;
+                    disarmButton.disabled = true;
+                    resetButton.disabled = true;
+                    statusKey = 'statusDisarmed';
+                    break;
+                case 'ARMED':
+                    statusLight.classList.add('bg-green-500');
+                    armButton.disabled = true;
+                    disarmButton.disabled = false;
+                    resetButton.disabled = true;
+                    statusKey = 'statusArmed';
+                    break;
+                case 'TRIGGERED':
+                    statusLight.classList.add('bg-red-500');
+                    armButton.disabled = true;
+                    disarmButton.disabled = false;
+                    resetButton.disabled = false;
+                    statusKey = 'statusTriggered';
+                    break;
+                case 'ERROR':
+                     statusLight.classList.add('bg-yellow-500'); // Use yellow for error/unknown
+                     armButton.disabled = true;
+                     disarmButton.disabled = true;
+                     resetButton.disabled = true;
+                     statusKey = 'statusError';
+                     break;
+                default: // 包括 UNKNOWN / Include UNKNOWN
+                    statusLight.classList.add('bg-yellow-500');
+                    armButton.disabled = true;
+                    disarmButton.disabled = true;
+                    resetButton.disabled = true;
+                    statusKey = 'statusUnknown';
+                    break;
+            }
+            // Update status text (using translation)
+            statusText.textContent = translations[currentLang][statusKey] || currentAlarmState;
+
+
+            pirStatus.className = data.sensors?.pir_active ? 'text-red-600 font-semibold' : 'text-gray-900';
+            proximityStatus.className = data.sensors?.proximity_active ? 'text-red-600 font-semibold' : 'text-gray-900';
+            pirStatus.setAttribute('data-translate-key', data.sensors?.pir_active ? 'statusActive' : 'statusInactive');
+            proximityStatus.setAttribute('data-translate-key', data.sensors?.proximity_active ? 'statusActive' : 'statusInactive');
+            pirStatus.textContent = translations[currentLang][pirStatus.getAttribute('data-translate-key')];
+            proximityStatus.textContent = translations[currentLang][proximityStatus.getAttribute('data-translate-key')];
+        }
+
+        // --- 语言切换函数 / Language Switching Function ---
+        function setLanguage(lang) {
+            if (!translations[lang]) return; 
+            currentLang = lang;
+            localStorage.setItem('alarmLang', lang); // Save preference
+            document.documentElement.lang = lang.split('-')[0]; // 更新 html lang 属性 / Update html lang attribute
+
+            // 更新所有带 data-translate-key 属性的元素 / Update all elements with data-translate-key attribute
+            document.querySelectorAll('[data-translate-key]').forEach(element => {
+                const key = element.getAttribute('data-translate-key');
+                // 特殊处理加载状态，避免覆盖 / Special handling for loading state to avoid overwriting
+                if (element.id === 'status-text' && element.textContent === translations[lang]['loading']) {
+                   // Don't translate if it's currently showing "Loading..."
+                } else if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
+             //  Update status and sensor texts (if not currently loading)
+             if (statusText.textContent !== translations[currentLang]['loading']) {
+                 updateStatusUI({ // Re-apply translations based on current state
+                    state: currentAlarmState,
+                    last_trigger: lastTrigger.textContent, // Keep current value
+                    sensors: {
+                        pir_active: pirStatus.getAttribute('data-translate-key') === 'statusActive',
+                        proximity_active: proximityStatus.getAttribute('data-translate-key') === 'statusActive'
+                    }
+                 });
+             }
+
+
+            // 更新语言按钮的激活状态 / Update language button active state
+            langButtonZh.classList.toggle('active', lang === 'zh-CN');
+            langButtonEn.classList.toggle('active', lang === 'en-US');
+        }
+
+
+        // --- 消息显示函数 / Message Display Functions ---
+        function displayMessage(msg) {
+            messageArea.textContent = msg;
+        }
+
+        function clearMessage() {
+            messageArea.textContent = '';
+        }
+
+        // --- 事件监听器 / Event Listeners ---
+        armButton.addEventListener('click', () => sendCommand('arm'));
+        disarmButton.addEventListener('click', () => sendCommand('disarm'));
+        resetButton.addEventListener('click', () => sendCommand('reset'));
+
+        // --- 初始化和轮询 / Initialization and Polling ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setLanguage(currentLang);
+            fetchStatus();
+            setInterval(fetchStatus, STATUS_POLL_INTERVAL);
+        });
+    </script>
+</body>
+</html>
