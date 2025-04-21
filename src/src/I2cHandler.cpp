@@ -12,16 +12,16 @@
 // VCNL4010 Register Addresses (From Datasheet)
 #define VCNL4010_I2C_ADDR 0x13 // Default address
 #define VCNL4010_REG_COMMAND 0x80
+#define VCNL4010_REG_PRODUCT_ID 0x81
 #define VCNL4010_REG_PROX_RATE 0x82
 #define VCNL4010_REG_PROX_CURRENT 0x83
+#define VCNL4010_REG_AMBIENT_LIGHT 0x85
 #define VCNL4010_REG_PROX_DATA_MSB 0x87
 #define VCNL4010_REG_PROX_DATA_LSB 0x88
 #define VCNL4010_REG_INT_CONTROL 0x89
 
 // VCNL4010 Command Bits
-#define VCNL4010_CMD_PROX_ENABLE 0x01
-#define VCNL4010_CMD_SELFTIMED_ENABLE 0x08 // Use self-timed mode
-#define VCNL4010_CMD_PROX_ON_DEMAND 0x01   // For command reg 0x80, bit 0
+#define VCNL4010_CMD_SELFTIMED_ENABLE 0x07 // Use self-timed mode
 
 // VCNL4010 Configuration values (Example)
 #define VCNL4010_PROX_RATE_HZ 3     // ~3.9 Hz (check datasheet for values 0-7)
@@ -82,6 +82,36 @@ static inline int i2c_read_word_data(int fd, uint8_t reg, uint16_t *value)
     return 0;
 }
 
+// Simple ioctl based read byte data
+static inline int i2c_read_byte_data(int fd, uint8_t reg, uint8_t *value)
+{
+    uint8_t outbuf[1] = {reg};
+    uint8_t inbuf[1] = {0};
+    struct i2c_msg msgs[2] = {
+        {// First message: write register address
+         .addr = VCNL4010_I2C_ADDR,
+         .flags = 0, // Write
+         .len = 1,
+         .buf = outbuf},
+        {// Second message: read data
+         .addr = VCNL4010_I2C_ADDR,
+         .flags = I2C_M_RD, // Read
+         .len = 1,
+         .buf = inbuf}};
+    struct i2c_rdwr_ioctl_data msgset = {
+        .msgs = msgs,
+        .nmsgs = 2};
+
+    if (ioctl(fd, I2C_RDWR, &msgset) < 0)
+    {
+        perror("ioctl(I2C_RDWR) read failed");
+        return -1;
+    }
+    // VCNL4010 data is MSB first
+    *value = inbuf[0];
+    return 0;
+}
+
 I2cHandler::I2cHandler(AlarmController &controller, const std::string &devicePath, uint8_t deviceAddr)
     : alarmController(controller), i2cDevicePath(devicePath), i2cDeviceAddr(deviceAddr),
       running(false), pollingIntervalMs(200), proximityThreshold(3000) {} // Default values
@@ -125,7 +155,12 @@ bool I2cHandler::initialize()
 
 bool I2cHandler::configureSensor()
 {
+    uint8_t PRODUCT_ID = 0;
     std::cout << "Configuring VCNL4010..." << std::endl;
+    // Check product id
+    i2c_read_byte_data(fd, VCNL4010_REG_PRODUCT_ID, &PRODUCT_ID);
+    if (PRODUCT_ID != 0x21)
+        return false
     // Set proximity rate (3.9 Hz)
     if (i2c_write_byte_data(fd, VCNL4010_REG_PROX_RATE, VCNL4010_PROX_RATE_HZ) < 0)
         return false;
@@ -133,7 +168,7 @@ bool I2cHandler::configureSensor()
     if (i2c_write_byte_data(fd, VCNL4010_REG_PROX_CURRENT, VCNL4010_PROX_CURRENT_MA) < 0)
         return false;
     // Enable self-timed proximity measurements
-    if (i2c_write_byte_data(fd, VCNL4010_REG_COMMAND, VCNL4010_CMD_SELFTIMED_ENABLE | VCNL4010_CMD_PROX_ENABLE) < 0)
+    if (i2c_write_byte_data(fd, VCNL4010_REG_COMMAND, VCNL4010_CMD_SELFTIMED_ENABLE) < 0)
         return false;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Short delay after config
