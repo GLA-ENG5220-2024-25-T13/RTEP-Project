@@ -1,6 +1,6 @@
-# RTEP-Project
+# Proximity alarm system
 
-RTEP-Project is a simple alarm system designed for embedded Linux platforms like Raspberry Pi. It utilizes PIR (Passive Infrared) and VCNL4010 proximity sensors to detect intrusions, controls an alarm sound, and provides status updates and control via a web API. An optional Qt-based graphical user interface (GUI) is included but is currently **incomplete and considered experimental (TODO)**.
+Our project is a simple alarm system designed for embedded Linux platforms like Raspberry Pi. It utilizes PIR (Passive Infrared) and VCNL4010 proximity sensors to detect intrusions, controls an alarm sound, and provides status updates and control via a web API. An optional Qt-based graphical user interface (GUI) is included but is currently **incomplete and considered experimental (TODO)**.
 
 ## Features
 
