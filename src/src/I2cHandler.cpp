@@ -160,7 +160,7 @@ bool I2cHandler::configureSensor()
     // Check product id
     i2c_read_byte_data(fd, VCNL4010_REG_PRODUCT_ID, &PRODUCT_ID);
     if (PRODUCT_ID != 0x21)
-        return false
+        return false;
     // Set proximity rate (3.9 Hz)
     if (i2c_write_byte_data(fd, VCNL4010_REG_PROX_RATE, VCNL4010_PROX_RATE_HZ) < 0)
         return false;
