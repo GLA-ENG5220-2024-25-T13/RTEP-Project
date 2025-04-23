@@ -184,6 +184,13 @@ The `RTEP` server provides the following endpoints:
         }
         ```
 
+## Social Media Account
+
+https://youtube.com/@team13-i8t?si=IQBlaMENYFneyDBU
+
+## Response Delay
+During development, we roughly tested the delay using logs. The delay from the sensor signal emission to the triggering of the alarm handler is relatively low, sometimes less than 1 millisecond. However, the sensor itself has a triggering delay, and the VCNL4010 sensor we used internally collects and reports data periodically. Based on our configuration, it reports data every 80 milliseconds. Additionally, our web front-end page collects current status through polling a RESTful API every 200 milliseconds, which may lead to a delay of around 300 milliseconds in extreme cases. Furthermore, since we utilize an external player to play alarm sound effects, this may introduce tens to hundreds of milliseconds of delay depending on system scheduling. Nonetheless, in the worst-case scenario, our response delay will not exceed one second.
+
 ## License
 
 GPLv3
